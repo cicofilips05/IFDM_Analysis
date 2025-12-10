@@ -13,6 +13,7 @@ IFDMEmprego&Renda.xlsx/ – Base de dados utilizadas para a análise
 Visualização
 
 Link para o RPubs: https://rpubs.com/Cicofilips/1379115
+
 O relatório em HTML: file:///C:/Users/dinoe/Downloads/IFDM/AnaliseIFDM.html
 
 
