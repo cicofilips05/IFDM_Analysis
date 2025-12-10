@@ -8,16 +8,11 @@ AnaliseIFDM.Rmd – Código completo do relatório em R Markdown.
 
 AnaliseIFDM.html – Relatório gerado em HTML.
 
-Dados/ – Base de dados utilizadas para a análise (ex.: IFDM Emprego & Renda).
+IFDMEmprego&Renda.xlsx/ – Base de dados utilizadas para a análise
 
 Visualização
 
-O relatório em HTML pode ser aberto diretamente em qualquer navegador, permitindo interatividade com gráficos e tabelas.
+Link para o RPubs: https://rpubs.com/Cicofilips/1379115
+O relatório em HTML: file:///C:/Users/dinoe/Downloads/IFDM/AnaliseIFDM.html
 
-Como Executar
 
-Instale os pacotes do R listados no AnaliseIFDM.Rmd.
-
-Abra o arquivo AnaliseIFDM.Rmd no RStudio.
-
-Clique em Knit para gerar o relatório em HTML ou PDF.
