@@ -1,0 +1,1044 @@
+---
+title: "Análise do Índice Firjan de Desenvolvimento Municipal entre 2013 e 2023"
+author: "Cicero Filipe Rocha Da Silva"
+date: "`r format(Sys.time(), '%d de %B de %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    theme: cosmo
+    highlight: tango
+    df_print: paged
+mainfont: "Times New Roman"
+geometry: margin=2cm
+always_allow_html: true
+
+---
+
+\newpage
+
+# Introdução 
+
+O Índice FIRJAN de Desenvolvimento Municipal (IFDM) constitui uma das principais ferramentas de acompanhamento das condições socioeconômicas dos municípios brasileiros. Elaborado pela Federação das Indústrias do Estado do Rio de Janeiro (FIRJAN), o indicador sintetiza informações provenientes de bases oficiais e segmenta o desenvolvimento municipal em três dimensões: Educação, Saúde e Emprego & Renda. Este relatório concentra-se exclusivamente no IFDM Emprego & Renda, componente que mede a dinâmica do mercado de trabalho formal, a geração de ocupação e a evolução da massa salarial, refletindo diretamente o desempenho econômico local.Sendo convencionados quatro conceitos: municípios com IFDM entre 0,0 e 0,4: Desenvolvimento Crítico; municípios com IFDM entre 0,4 e 0,6: Desenvolvimento Baixo; municípios com IFDM entre 0,6 e 0,8: Desenvolvimento Moderado;municípios com IFDM entre 0,8 e 1,0: Desenvolvimento Alto.
+
+A análise abrange o período de 2013 a 2023, permitindo observar tendências, assimetrias regionais e padrões de crescimento ou retração ao longo da última década. Com a utilização dos microdados consolidados do IFDM e técnicas de manipulação, visualização e sumarização de dados, este relatório busca apresentar uma leitura sistemática da evolução do índice nos municípios brasileiros.
+
+Inicialmente, os dados foram reorganizados para estrutura de painel e tratados para garantir consistência estatística. Em seguida, são apresentadas estatísticas descritivas anuais, incluindo média, mediana, dispersão e valores extremos do IFDM, oferecendo uma visão geral do comportamento agregado do indicador. A análise gráfica da distribuição anual, por meio de violinos e boxplots, complementa essa leitura ao evidenciar a heterogeneidade entre municípios.
+
+O relatório também identifica os 10 municípios com maior e menor desempenho em cada ano, permitindo comparar trajetórias e padrões persistentes tanto entre os melhores quanto entre os piores colocados. A partir da comparação entre 2013 e 2023, são destacados os municípios que mais avançaram e os que mais regrediram no período, oferecendo insights sobre dinâmicas locais de progresso ou deterioração.
+
+Além disso, são exploradas diferenças espaciais por meio de gráficos de dispersão, análises da evolução da média estadual, densidade da distribuição do índice entre Unidades da Federação, e comparações por regiões do país. Mapas temáticos reforçam a dimensão territorial da análise, permitindo visualizar a distribuição geográfica do IFDM no início e no final do período estudado.
+
+Combinando técnicas de análise descritiva, visualização avançada e organização espacial dos dados, este relatório fornece uma visão abrangente da evolução do IFDM Emprego & Renda no Brasil. Os resultados apresentados servem como base para interpretações sobre desigualdades regionais, dinâmicas econômicas municipais e mudanças estruturais que influenciam o mercado de trabalho no país.
+
+```{r r1, EVAL = TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+
+# Pacotes Utilizados
+
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(janitor)
+library(gt)
+library(ggplot2)
+library(forcats)
+library(stringr)
+library(knitr)
+library(kableExtra)
+library(ggridges)
+library(viridis)
+library(geobr)
+
+```
+
+
+```{r r2, include=FALSE, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+
+# Importando base de dados
+IFDM_empregoerenda <- read_xlsx("C:/Users/dinoe/Downloads/IFDM/IFDMEmprego&Renda.xlsx")
+
+# Corrigindo Variáveis 
+IFDM_empregoerenda <- IFDM_empregoerenda %>%
+  mutate(across(starts_with("Ranking"), ~as.numeric(.)),
+         across(starts_with("IFDM"), ~as.numeric(.)))
+ 
+# renomeando colunas
+IFDM_empregoerenda <- IFDM_empregoerenda %>%
+  clean_names()
+
+# Estrutura e Seleção das colunas de interesse
+ifdm_lgpt <- IFDM_empregoerenda %>%
+  pivot_longer(
+    cols = starts_with("ifdm_emprego_"),
+    names_to = "ano",
+    values_to = "ifdm"
+  ) %>%
+  mutate(ano = readr::parse_number(ano)) %>% 
+  select(cod_munic,
+         sigla_uf,
+         nome_munic, 
+         ano,
+         ifdm
+         )
+```
+
+# Estatísticas Decritivas
+
+Primeiro é criado uma tabela de estatísticas descritivas do IFDM Emprego & Renda por ano, incluindo média, mediana, desvio-padrão, mínimo e máximo, desconsiderando valores ausentes.
+
+```{r r3, eval=TRUE, echo = TRUE, warning = FALSE, message = FALSE}
+
+# Estatísticas
+tabela_estats <- ifdm_lgpt %>%
+  group_by(ano) %>%
+  summarise(
+    media   = mean(ifdm, na.rm = TRUE),
+    mediana = median(ifdm, na.rm = TRUE),
+    sd      = sd(ifdm, na.rm = TRUE),
+    minimo  = min(ifdm, na.rm = TRUE),
+    maximo  = max(ifdm, na.rm = TRUE)
+  )
+
+```   
+
+A Tabela apresenta as estatísticas descritivas do IFDM Emprego & Renda para o período de 2013 a 2023. Observa-se uma tendência geral de crescimento na média do índice, que passou de aproximadamente 0,523 em 2013 para 0,586 em 2023, indicando uma melhora progressiva nas condições de emprego e renda nos municípios brasileiros. A mediana segue um padrão semelhante à média, sugerindo que a distribuição do índice é relativamente simétrica e não é fortemente influenciada por valores extremos.
+
+O desvio-padrão se manteve relativamente estável ao longo da década, em torno de 0,20 a 0,23, o que evidencia que a variação entre municípios se manteve consistente. No entanto, a presença de valores mínimos baixos, embora ligeiramente crescentes, revela que ainda existem municípios com desempenho significativamente inferior, destacando persistentes desigualdades regionais. Por outro lado, o valor máximo do IFDM permaneceu próximo de 1 em boa parte dos anos, mostrando que alguns municípios já alcançaram o nível máximo do índice e mantêm desempenho elevado.
+
+```{r r4, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+
+# Tabela de visualização Estatísticas Descritivas 
+tabela_descritiva <- tabela_estats %>%
+  mutate(across(media:maximo, ~ round(.x, 3))) %>%   
+  kable(
+    format = "html",
+    caption = "Estatísticas Descritivas do IFDM Emprego (2013–2023)",
+    align = "c",
+    col.names = c("Ano", "Média", "Mediana", "Desvio-padrão", "Mínimo", "Máximo")
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "center",
+    font_size = 13
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#E5E5E5") %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2:6, width = "10em")
+tabela_descritiva
+
+```
+
+A análise da distribuição do Índice, revela uma acentuada estabilidade na performance de desenvolvimento dos municípios brasileiros ao longo do período de 2013 a 2023. O gráfico demonstra que, ano após ano, tanto a mediana  quanto a densidade de municípios se mantiveram praticamente inalteradas. A maior concentração de municípios persiste na faixa de desenvolvimento crítico, sugerindo que as políticas e condições econômicas do período não geraram uma alteração significativa ou uma convergência de desempenho, resultando em uma distribuição cronicamente estável e polarizada por mais de uma década. 
+
+```{r r5, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 5}
+
+# Grafico distribuição para o IFDM 
+grafico_distribuicao <- ggplot(ifdm_lgpt, aes(x = factor(ano), y = ifdm, fill = factor(ano))) +
+  geom_violin(alpha = 0.9) +
+  geom_boxplot(width = 0.12, fill = "white", alpha = 0.5, color = "black") +
+  scale_fill_viridis(discrete = TRUE, option = "plasma") +
+  labs(
+    title = "Distribuição do IFDM por Ano (2013–2023)",
+    x = "Ano",
+    y = "IFDM"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(face = "bold"),
+    legend.position = "none"
+  )
+grafico_distribuicao
+
+```
+
+# Ranking Dos Municípios 
+
+É criado um ranking que Identifica os 10 municípios com maior IFDM por ano, organiza em formato wide para visualização e formata a tabela para apresentação.
+
+```{r r6, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+
+# Top 10 melhores municípios por ano 
+top10_melhores <- ifdm_lgpt %>%
+  group_by(ano) %>%
+  arrange(desc(ifdm)) %>%
+  slice(1:10) %>%
+  ungroup()
+
+# Tabela Top 10 melhores
+top10_melhores <- top10_melhores %>%
+  group_by(ano) %>%
+  mutate(Ranking = row_number()) %>%   
+  ungroup() %>%
+  select(Ranking, ano, nome_munic) %>%  
+  pivot_wider(
+    names_from = ano,
+    values_from = nome_munic
+  ) %>%
+  arrange(Ranking)
+
+### Top 10 piores municípios por ano 
+top10_piores <- ifdm_lgpt %>%
+  group_by(ano) %>%
+  arrange(ifdm) %>%
+  slice(1:10) %>%
+  ungroup()
+
+# Tabela Top 10 piores
+top10_piores <- top10_piores %>%
+  group_by(ano) %>%
+  mutate(Ranking = row_number()) %>%   
+  ungroup() %>%
+  select(Ranking, ano, nome_munic) %>%  
+  pivot_wider(
+    names_from = ano,
+    values_from = nome_munic
+  ) %>%
+  arrange(Ranking)
+
+```
+
+A tabela a seguir apresenta os dez municípios com melhor desempenho no IFDM Emprego & Renda em cada ano do período de 2013 a 2023. Observa-se que alguns municípios aparecem repetidamente entre os primeiros colocados, como Balneário Camboriú, Videira, Gramado, Campinas e Barueri, indicando consistência em seu desempenho econômico e na geração de emprego formal ao longo da década. Além disso, há uma diversidade geográfica, com municípios do Sul e Sudeste predominando, o que evidencia a concentração regional de bons resultados em termos de mercado de trabalho e renda formal. A análise dessa tabela permite identificar quais municípios apresentam trajetórias de destaque que podem servir de referência para estratégias de desenvolvimento em outras regiões do país.
+
+```{r r7, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+
+# tabela para visualização 
+tabela_top10melhores <- top10_melhores %>%
+  kable(
+    format = "html",
+    caption = "Top 10 Municípios com Maior IFDM por Ano",
+    align = "c",
+    col.names = c("Ranking", names(top10_melhores)[-1])
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    font_size = 13,
+    position = "center"
+  ) %>%
+  column_spec(1, bold = TRUE, width = "5em", color = "black") %>%
+  column_spec(2:ncol(top10_melhores), width = "12em") %>%
+  row_spec(0, bold = TRUE, background = "#E5E5E5") %>%
+  add_header_above(c(" " = 1, "Municípios por Ano" = ncol(top10_melhores)-1))
+tabela_top10melhores
+
+```
+
+A tabela evidencia os dez municípios com menor desempenho no IFDM Emprego & Renda ao longo do período de 2013 a 2023. Nota-se uma forte concentração de municípios do Norte e Nordeste, especialmente do Maranhão, Piauí e Pará, refletindo desigualdades regionais persistentes no acesso a emprego formal e geração de renda. Municípios como Cachoeira Grande, Itaipava do Grajaú, Central do Maranhão e Presidente Sarney aparecem repetidamente entre os últimos colocados, indicando que enfrentam desafios estruturais e econômicos crônicos. A recorrência desses municípios na parte inferior do ranking sugere vulnerabilidades persistentes, como baixa diversificação econômica, menor infraestrutura e dificuldades em atrair investimentos. Essa análise permite compreender os padrões de atraso econômico e social, destacando áreas que poderiam se beneficiar de políticas públicas direcionadas para a melhoria do mercado de trabalho e da renda formal.
+
+```{r r8, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+
+# tabela para visualização 
+tabela_top10piores <- top10_piores %>%
+  kable(
+    format = "html",
+    caption = "Top 10 Municípios com Menor IFDM por Ano",
+    align = "c",
+    col.names = c("Ranking", names(top10_piores)[-1])
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    font_size = 13,
+    position = "center"
+  ) %>%
+  column_spec(1, bold = TRUE, width = "5em", color = "black") %>%
+  column_spec(2:ncol(top10_piores), width = "12em") %>%
+  row_spec(0, bold = TRUE, background = "#E5E5E5") %>%
+  add_header_above(c(" " = 1, "Municípios por Ano" = ncol(top10_piores)-1))
+tabela_top10piores
+
+```
+
+# Evolução dos Municípios no IFDM
+
+O código calcula a variação do IFDM entre 2013 e 2023 para cada município, identifica os 10 municípios que mais cresceram e os 10 que mais caíram e formata tabelas de visualização.
+
+```{r r9, eval=TRUE, echo = TRUE, warning = FALSE, message = FALSE}
+
+# Calcular IFDM inicial e final
+df_variacao <- ifdm_lgpt %>%
+  filter(ano %in% c(2013, 2023)) %>%
+  pivot_wider(
+    names_from = ano,
+    values_from = ifdm,
+    names_prefix = "ano_"
+  ) %>%
+  mutate(variacao = ano_2023 - ano_2013)
+
+# Top 10 Cresceram
+top10_crescimento <- df_variacao %>%
+  arrange(desc(variacao)) %>%
+  slice(1:10) %>%
+  mutate(variacao = round(variacao, 3))
+  
+# Top 10 Cairam
+top10_queda <- df_variacao %>%
+  arrange(variacao) %>%     
+  slice(1:10) %>%
+  mutate(variacao = round(variacao, 3))
+```
+
+A análise dos municípios com maior crescimento no índice de Emprego & Renda entre 2013 e 2023 revela avanços expressivos em localidades de diferentes regiões do país. Municípios como Primavera (PE), Trindade do Sul (RS) e Pajeú do Piauí apresentaram variações superiores a 0,4 no índice, refletindo melhorias significativas na geração de emprego formal e na massa salarial. Observa-se que algumas localidades que partiam de patamares relativamente baixos, como Pajeú do Piauí e Primavera, conseguiram alcançar níveis próximos ou superiores à média nacional. Além disso, municípios do Nordeste, Sudeste, Centro-Oeste e Sul aparecem entre os que mais avançaram, mostrando que, embora as desigualdades regionais ainda persistam, há exemplos concretos de progresso considerável em diferentes contextos.
+
+```{r r10, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+
+# tabela 
+tabela_crescimento <- top10_crescimento %>%
+  select(nome_munic, sigla_uf, ano_2013, ano_2023, variacao) %>%
+  kable(
+    format = "html",
+    caption = "Top 10 Municípios com Maior Crescimento no IFDM (2013–2023)",
+    col.names = c("Município", "UF", "IFDM 2013", "IFDM 2023", "Variação"),
+    align = "c"
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#E5E5E5") %>%
+  column_spec(1, bold = TRUE, width = "15em") %>%
+  column_spec(5, bold = TRUE)
+tabela_crescimento
+
+```
+
+Os municípios que apresentaram maior queda no índice de Emprego & Renda entre 2013 e 2023 evidencia retrocessos significativos em algumas localidades, principalmente no Norte e Nordeste, embora também ocorram casos isolados em outras regiões do país. Municípios como Barra de Guabiraba (PE), Ferreira Gomes (AP) e Pedra Branca do Amapari (AP) registraram reduções superiores a 0,25 no índice, indicando deterioração considerável nas condições do mercado de trabalho formal e na geração de renda. Algumas dessas localidades, que inicialmente possuíam níveis relativamente altos de IFDM, como Altamira (PA) e Monções (SP), sofreram quedas expressivas, sugerindo mudanças adversas no dinamismo econômico local, possíveis perdas de empregos formais ou redução da massa salarial.
+
+```{r r11, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+
+# tabela 
+tabela_queda <- top10_queda %>%
+  select(nome_munic, sigla_uf, ano_2013, ano_2023, variacao) %>%
+  kable(
+    format = "html",
+    caption = "Top 10 Municípios com Maior Queda no IFDM (2013–2023)",
+    col.names = c("Município", "UF", "IFDM 2013", "IFDM 2023", "Variação"),
+    align = "c"
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#E5E5E5") %>%
+  column_spec(1, bold = TRUE, width = "15em") %>%
+  column_spec(5, bold = TRUE, color = "black")
+tabela_queda
+
+```
+
+# Dispersão dos Municípios 
+
+É criado um gráfico de dispersão comparando o IFDM de cada município em 2013 e 2023, destacando a linha de igualdade para facilitar a interpretação de evolução positiva ou negativa.
+
+```{r r12, eval=TRUE, echo = TRUE, warning = FALSE, message = FALSE}
+
+df_disp <- ifdm_lgpt %>%
+  filter(ano %in% c(2013, 2023)) %>%
+  pivot_wider(
+    names_from = ano,
+    values_from = ifdm,
+    names_prefix = "ano_"
+  )
+
+```
+
+A análise da dispersão, indica uma forte correlação positiva, indicando que os municípios mantiveram, em grande medida, sua posição relativa no índice ao longo da década, aqueles com desenvolvimento alto em 2013 permaneceram com desempenho superior em 2023. No entanto, a análise dos dados confirma que a nuvem de pontos está predominantemente acima da linha de igualdade, demonstrando um avanço generalizado no desenvolvimento municipal. A maioria dos municípios registrou um aumento nominal em seus índices entre 2013 e 2023, o que sugere uma melhoria média na qualidade de vida e renda.
+
+```{r r13, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 5}
+
+# Grafico
+grafico_dispersao <- ggplot(df_disp, aes(x = ano_2013, y = ano_2023)) +
+  geom_point(
+    aes(color = ano_2023),
+    alpha = 0.7,
+    size = 2.2
+  ) +
+  scale_color_viridis(
+    option = "plasma",
+    name = "IFDM 2023"
+  ) +
+  geom_abline(
+    intercept = 0, slope = 1,
+    linetype = "dashed",
+    color = "black",
+    size = 0.8
+  ) +
+  labs(
+    title = "Dispersão do IFDM: 2013 × 2023",
+    x = "IFDM em 2013",
+    y = "IFDM em 2023"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 18),
+    plot.subtitle = element_text(hjust = 0.5, size = 13),
+    axis.title = element_text(face = "bold", size = 14),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray85")
+  )
+grafico_dispersao
+
+```
+
+# Evolução Média do índice por Estado
+
+Calcula a média anual do IFDM para cada estado e cria um gráfico de densidade para visualizar a distribuição do índice por estado ao longo do período.
+
+```{r r14, eval=TRUE, echo = TRUE, warning = FALSE, message = FALSE}
+
+media_estado <- ifdm_lgpt %>%
+  group_by(sigla_uf, ano) %>%
+  summarise(media_ifdm = mean(ifdm, na.rm = TRUE), .groups = "drop")
+
+```
+
+O gráfico de densidade de cristas, que mapeia a distribuição da média do IFDM para cada estado no período 2013-2023, visualiza a grande disparidade regional e a tendência de recuperação observada nos dados. As cristas mais à direita (maior IFDM), como DF, SC, MS, MT e SP, mostram uma distribuição em um patamar consistentemente mais alto, com desenvolvimento entre moderado e alto. Enquanto as cristas do Norte e Nordeste AM, MA, PI, estão agrupadas na extremidade esquerda, com maioria em desenvolvimento crítico. A forma alongada e o deslocamento da densidade para a direita em quase todas as cristas (particularmente de 2021 a 2023) confirmam que, apesar de uma fase de estagnação ou queda, a média do desenvolvimento brasileiro avançou na década, com quase todos os estados registrando um IFDM médio superior em 2023 em comparação a 2013.
+
+```{r r15, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 5}
+
+# grafico
+grafico_evo <- ggplot(media_estado, aes(x = media_ifdm, y = fct_rev(fct_inorder(sigla_uf)), fill = sigla_uf)) +
+  geom_density_ridges(
+    scale = 1.4,
+    alpha = 0.85,
+    rel_min_height = 0.01,
+    color = "black",      
+    size = 0.4
+  ) +
+  scale_fill_viridis_d(option = "plasma") +
+  labs(
+    title = "Distribuição da Média do IFDM por Estado (2013–2023)",
+    x = "IFDM Médio",
+    y = "Estados"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.title = element_text(face = "bold", size = 14),
+    axis.text.y = element_text(face = "bold", size = 12),
+    axis.text.x = element_text(face = "bold", size = 12),
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank()
+  )
+grafico_evo
+
+
+```
+
+Calcula a média do IFDM de 2013 a 2023 para cada estado e apresenta em uma tabela organizada.
+
+```{r r21, eval=TRUE, echo = TRUE, warning = FALSE, message = FALSE}
+
+# Media do Periodo para os Estados
+media_periodo_estados <- ifdm_lgpt %>%
+  group_by(sigla_uf) %>%
+  summarise(media_ifdm_periodo = mean(ifdm, na.rm = TRUE)) %>%
+  arrange(desc(media_ifdm_periodo))
+
+```
+
+A análise da média do IFDM Emprego & Renda ao longo do período de 2013 a 2023 revela claras diferenças regionais no desempenho econômico municipal. O Distrito Federal apresenta a maior média do índice, com 0,871. Estados do Sul e Sudeste, como Santa Catarina (0,786), São Paulo (0,713) e Mato Grosso (0,703), também apresentam médias elevadas, indicando desempenho consistente em termos de emprego e renda. Em contraste, estados do Norte e Nordeste registram médias substancialmente mais baixas, como Amazonas (0,274), Maranhão (0,292) e Piauí (0,293), evidenciando persistentes desigualdades regionais. Essa disparidade reflete diferenças no desenvolvimento econômico, capacidade de geração de empregos formais e massa salarial.
+
+```{r r22, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE}
+
+# Tabela
+media_periodo_estados %>%
+  mutate(media_ifdm_periodo = round(media_ifdm_periodo, 3)) %>%
+  kable("html", col.names = c("UF", "IFDM Médio (2013–2023)"),
+        align = "c",
+        caption = "Média do IFDM de Emprego e Renda por Estado (2013–2023)") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover")) %>%
+  column_spec(1, width = "10em", bold = TRUE) %>%
+  column_spec(2, width = "20em", bold = TRUE)
+
+```
+
+# Visão das Regiões
+
+Agrupa estados por região, compara distribuições do IFDM por região utilizando boxplots, e formata visualmente o gráfico. 
+
+```{r r16, eval=TRUE, echo = TRUE, warning = FALSE, message = FALSE}
+
+df_regiao <- ifdm_lgpt %>%
+  mutate(
+    regiao = case_when(
+      sigla_uf %in% c("AC","AP","AM","PA","RO","RR","TO") ~ "Norte",
+      sigla_uf %in% c("AL","BA","CE","MA","PB","PE","PI","RN","SE") ~ "Nordeste",
+      sigla_uf %in% c("DF","GO","MT","MS") ~ "Centro-Oeste",
+      sigla_uf %in% c("ES","MG","RJ","SP") ~ "Sudeste",
+      sigla_uf %in% c("PR","RS","SC") ~ "Sul"
+    ))
+
+```
+
+A análise do IFDM por meio do gráfico de distribuição revela uma disparidade entre regiões. O Box Plot de Região demonstra uma polarização extrema, com o Sul, Centro-Oeste e Sudeste com medianas elevadas, com nível moderado próximo ao alto.Norte e Nordeste, com medianas significativamente baixas, com nível crítico. Embora Norte e Nordeste possuam outliers de alto desempenho, a concentração da massa de dados em patamares inferiores.
+
+```{r r17, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 5}
+
+# grafico 
+grafico_regi <- ggplot(df_regiao, aes(x = regiao, y = ifdm, fill = regiao)) +
+  geom_boxplot(
+    alpha = 0.9,
+    color = "black",        
+    size = 0.6,
+    outlier.color = viridis::viridis(1, option = "plasma"), 
+    outlier.size = 2.2
+  ) +
+  scale_fill_viridis_d(option = "plasma") +
+  labs(
+    title = "Distribuição do IFDM por Região (2013–2023)",
+    x = "Região",
+    y = "IFDM"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 18),
+    plot.subtitle = element_text(hjust = 0.5, size = 13, color = "gray25"),
+    axis.title = element_text(face = "bold"),
+    axis.text.x = element_text(face = "bold", size = 12),
+    axis.text.y = element_text(face = "bold", size = 12),
+    panel.grid.major.x = element_blank(),  
+    panel.grid.major.y = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    legend.position = "none",
+    plot.margin = margin(15, 15, 15, 15)
+  )
+grafico_regi
+
+
+```
+
+# Mapas Municipais: 2013 x 2023
+
+Carrega o mapa municipal do Brasil e faz join com o IFDM de 2013 e 2023, criando mapas temáticos que representam o índice em cada município.
+
+```{r r18, eval=TRUE, echo = TRUE, warning = FALSE, message = FALSE}
+# Carregar mapa municipal
+mapa <- read_municipality(year = 2023) %>%
+  mutate(
+    code_muni_7 = as.character(code_muni),
+    code_muni = substr(code_muni_7, 1, 6)
+  )
+
+# Preparar
+df_map <- ifdm_lgpt %>%
+  filter(ano %in% c(2013, 2023)) %>%
+  select(ano, cod_munic, ifdm) %>%
+  mutate(code_muni = as.character(cod_munic)) %>%
+  select(-cod_munic)
+
+# Join
+mapa_ifdm <- mapa %>%
+  left_join(df_map, by = "code_muni")
+
+```
+
+A visualização espacial do IFDM Emprego & Renda para 2013 pode ser vista a seguir. Em 2013, observa-se que municípios do Sul e Sudeste apresentavam índices mais elevados, com destaque para estados como São Paulo, Santa Catarina e Distrito Federal, enquanto a maior parte do Norte e Nordeste registrava valores mais baixos.
+
+```{r r19, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 5}
+
+# Grafico 2013 
+mapa_2013 <- ggplot(mapa_ifdm %>% filter(ano == 2013)) +
+  geom_sf(aes(fill = ifdm), color = NA) +
+  scale_fill_viridis(
+    name = "IFDM 2013",
+    option = "plasma",
+    na.value = "grey90"
+  ) +
+  labs(
+    title = "Mapa do IFDM (Emprego e Renda) – 2013",
+    caption = "Fonte: Elaboração própria com dados do IBEGE / FIRJAN"
+  ) +
+  coord_sf(datum = NA, expand = FALSE) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    legend.title = element_text(face = "bold")
+  )
+mapa_2013   
+
+```
+
+A visualização espacial do IFDM Emprego & Renda para 2023 pode ser vista a seguir. Nota-se uma leve tendência de melhora em diversos municípios no Nordeste e Norte, embora as diferenças regionais ainda permaneçam visíveis. 
+
+```{r r20, eval=TRUE, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 8, fig.height = 5}
+
+# Grafico 2023
+mapa_2023 <- ggplot(mapa_ifdm %>% filter(ano == 2023)) +
+  geom_sf(aes(fill = ifdm), color = NA) +
+  scale_fill_viridis(
+    name = "IFDM 2023",
+    option = "plasma",
+    na.value = "grey90"
+  ) +
+  labs(
+    title = "Mapa do IFDM (Emprego e Renda) – 2023",
+    caption = "Fonte: Elaboração própria com dados do IBEGE / FIRJAN"
+  ) +
+  coord_sf(datum = NA, expand = FALSE) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    legend.title = element_text(face = "bold")
+  )
+mapa_2023
+
+```
+
+# Apêndice 
+
+Abaixo é exposto todo o código utilizado para produção da análise. 
+
+```{r, eval=FALSE, echo=TRUE, warning=FALSE, message=FALSE}
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(janitor)
+library(gt)
+library(ggplot2)
+library(forcats)
+library(stringr)
+library(knitr)
+library(kableExtra)
+library(ggridges)
+library(viridis)
+library(geobr)
+
+
+Sys.setlocale("LC_ALL", "en_US.UTF-8")
+
+##### Base #####
+# Importando base de dados
+IFDM_empregoerenda <- read_xlsx("C:/Users/dinoe/Downloads/IFDM/IFDMEmprego&Renda.xlsx")
+
+# Verificando estrutura dos dados
+str(IFDM_empregoerenda)
+
+# Corrigindo Variáveis 
+IFDM_empregoerenda <- IFDM_empregoerenda %>%
+  mutate(across(starts_with("Ranking"), ~as.numeric(.)),
+         across(starts_with("IFDM"), ~as.numeric(.)))
+ 
+# renomeando colunas
+IFDM_empregoerenda <- IFDM_empregoerenda %>%
+  clean_names()
+
+#### Estatísticas Decritivas ####
+
+# mudando estrutura dos dados
+ifdm_lgpt <- IFDM_empregoerenda %>%
+  pivot_longer(
+    cols = starts_with("ifdm_emprego_"),
+    names_to = "ano",
+    values_to = "ifdm"
+  ) %>%
+  mutate(ano = readr::parse_number(ano)) %>% 
+  select(cod_munic,
+         sigla_uf,
+         nome_munic, 
+         ano,
+         ifdm
+         )
+
+# Estatísticas
+tabela_estats <- ifdm_lgpt %>%
+  group_by(ano) %>%
+  summarise(
+    media   = mean(ifdm, na.rm = TRUE),
+    mediana = median(ifdm, na.rm = TRUE),
+    sd      = sd(ifdm, na.rm = TRUE),
+    minimo  = min(ifdm, na.rm = TRUE),
+    maximo  = max(ifdm, na.rm = TRUE)
+  )
+
+# Tabela de visualização Estatísticas Descritivas 
+tabela_descritiva <- tabela_estats %>%
+  mutate(across(media:maximo, ~ round(.x, 3))) %>%   
+  kable(
+    format = "html",
+    caption = "Estatísticas Descritivas do IFDM Emprego (2013–2023)",
+    align = "c",
+    col.names = c("Ano", "Média", "Mediana", "Desvio-padrão", "Mínimo", "Máximo")
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "center",
+    font_size = 13
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#E5E5E5") %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2:6, width = "10em")
+tabela_descritiva
+
+
+# Grafico distribuição para o IFDM 
+grafico_distribuicao <- ggplot(ifdm_lgpt, aes(x = factor(ano), y = ifdm, fill = factor(ano))) +
+  geom_violin(alpha = 0.9) +
+  geom_boxplot(width = 0.12, fill = "white", alpha = 0.5, color = "black") +
+  scale_fill_viridis(discrete = TRUE, option = "plasma") +
+  labs(
+    title = "Distribuição do IFDM por Ano (2013–2023)",
+    x = "Ano",
+    y = "IFDM"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title = element_text(face = "bold"),
+    legend.position = "none"
+  )
+grafico_distribuicao
+
+
+#### Raking dos Melhores e Piores #####
+### Top 10 melhores municípios por ano 
+top10_melhores <- ifdm_lgpt %>%
+  group_by(ano) %>%
+  arrange(desc(ifdm)) %>%
+  slice(1:10) %>%
+  ungroup()
+
+# Tabela Top 10 melhores
+top10_melhores <- top10_melhores %>%
+  group_by(ano) %>%
+  mutate(Ranking = row_number()) %>%   
+  ungroup() %>%
+  select(Ranking, ano, nome_munic) %>%  
+  pivot_wider(
+    names_from = ano,
+    values_from = nome_munic
+  ) %>%
+  arrange(Ranking)
+
+# tabela para visualização 
+tabela_top10melhores <- top10_melhores %>%
+  kable(
+    format = "html",
+    caption = "Top 10 Municípios com Maior IFDM por Ano",
+    align = "c",
+    col.names = c("Ranking", names(top10_melhores)[-1])
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    font_size = 13,
+    position = "center"
+  ) %>%
+  column_spec(1, bold = TRUE, width = "5em", color = "black") %>%
+  column_spec(2:ncol(top10_melhores), width = "12em") %>%
+  row_spec(0, bold = TRUE, background = "#E5E5E5") %>%
+  add_header_above(c(" " = 1, "Municípios por Ano" = ncol(top10_melhores)-1))
+tabela_top10melhores
+
+
+### Top 10 piores municípios por ano 
+top10_piores <- ifdm_lgpt %>%
+  group_by(ano) %>%
+  arrange(ifdm) %>%
+  slice(1:10) %>%
+  ungroup()
+
+# Tabela Top 10 piores
+top10_piores <- top10_piores %>%
+  group_by(ano) %>%
+  mutate(Ranking = row_number()) %>%   
+  ungroup() %>%
+  select(Ranking, ano, nome_munic) %>%  
+  pivot_wider(
+    names_from = ano,
+    values_from = nome_munic
+  ) %>%
+  arrange(Ranking)
+
+# tabela para visualização 
+tabela_top10piores <- top10_piores %>%
+  kable(
+    format = "html",
+    caption = "Top 10 Municípios com Menor IFDM por Ano",
+    align = "c",
+    col.names = c("Ranking", names(top10_piores)[-1])
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    font_size = 13,
+    position = "center"
+  ) %>%
+  column_spec(1, bold = TRUE, width = "5em", color = "black") %>%
+  column_spec(2:ncol(top10_piores), width = "12em") %>%
+  row_spec(0, bold = TRUE, background = "#E5E5E5") %>%
+  add_header_above(c(" " = 1, "Municípios por Ano" = ncol(top10_piores)-1))
+tabela_top10piores
+
+
+##### Evolução dos Municípios #####
+
+# Calcular IFDM inicial e final
+df_variacao <- ifdm_lgpt %>%
+  filter(ano %in% c(2013, 2023)) %>%
+  pivot_wider(
+    names_from = ano,
+    values_from = ifdm,
+    names_prefix = "ano_"
+  ) %>%
+  mutate(variacao = ano_2023 - ano_2013)
+
+# Top 10 Cresceram
+top10_crescimento <- df_variacao %>%
+  arrange(desc(variacao)) %>%
+  slice(1:10) %>%
+  mutate(variacao = round(variacao, 3))
+# tabela 
+tabela_crescimento <- top10_crescimento %>%
+  select(nome_munic, sigla_uf, ano_2013, ano_2023, variacao) %>%
+  kable(
+    format = "html",
+    caption = "Top 10 Municípios com Maior Crescimento no IFDM (2013–2023)",
+    col.names = c("Município", "UF", "IFDM 2013", "IFDM 2023", "Variação"),
+    align = "c"
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#E5E5E5") %>%
+  column_spec(1, bold = TRUE, width = "15em") %>%
+  column_spec(5, bold = TRUE)
+tabela_crescimento
+
+# Top 10 Cresceram
+top10_queda <- df_variacao %>%
+  arrange(variacao) %>%     
+  slice(1:10) %>%
+  mutate(variacao = round(variacao, 3))
+# tabela 
+tabela_queda <- top10_queda %>%
+  select(nome_munic, sigla_uf, ano_2013, ano_2023, variacao) %>%
+  kable(
+    format = "html",
+    caption = "Top 10 Municípios com Maior Queda no IFDM (2013–2023)",
+    col.names = c("Município", "UF", "IFDM 2013", "IFDM 2023", "Variação"),
+    align = "c"
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  row_spec(0, bold = TRUE, background = "#E5E5E5") %>%
+  column_spec(1, bold = TRUE, width = "15em") %>%
+  column_spec(5, bold = TRUE, color = "red")
+tabela_queda
+
+
+##### Dispersão dos municipios IFDM 2013 x 2023 #####
+
+df_disp <- ifdm_lgpt %>%
+  filter(ano %in% c(2013, 2023)) %>%
+  pivot_wider(
+    names_from = ano,
+    values_from = ifdm,
+    names_prefix = "ano_"
+  )
+
+# Grafico
+grafico_dispersao <- ggplot(df_disp, aes(x = ano_2013, y = ano_2023)) +
+  geom_point(
+    aes(color = ano_2023),
+    alpha = 0.7,
+    size = 2.2
+  ) +
+  scale_color_viridis(
+    option = "plasma",
+    name = "IFDM 2023"
+  ) +
+  geom_abline(
+    intercept = 0, slope = 1,
+    linetype = "dashed",
+    color = "black",
+    size = 0.8
+  ) +
+  labs(
+    title = "Dispersão do IFDM: 2013 × 2023",
+    x = "IFDM em 2013",
+    y = "IFDM em 2023"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 18),
+    plot.subtitle = element_text(hjust = 0.5, size = 13),
+    axis.title = element_text(face = "bold", size = 14),
+    axis.text = element_text(size = 12),
+    legend.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray85")
+  )
+grafico_dispersao
+
+##### Evolução da Média do Indice por Estado #####
+
+media_estado <- ifdm_lgpt %>%
+  group_by(sigla_uf, ano) %>%
+  summarise(media_ifdm = mean(ifdm, na.rm = TRUE), .groups = "drop")
+
+# grafico
+grafico_evo <- ggplot(media_estado, aes(x = media_ifdm, y = fct_rev(fct_inorder(sigla_uf)), fill = sigla_uf)) +
+  geom_density_ridges(
+    scale = 1.4,
+    alpha = 0.85,
+    rel_min_height = 0.01,
+    color = "black",      
+    size = 0.4
+  ) +
+  scale_fill_viridis_d(option = "plasma") +
+  labs(
+    title = "Distribuição da Média do IFDM por Estado (2013–2023)",
+    x = "IFDM Médio",
+    y = "Estados"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 18),
+    axis.title = element_text(face = "bold", size = 14),
+    axis.text.y = element_text(face = "bold", size = 12),
+    axis.text.x = element_text(face = "bold", size = 12),
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank()
+  )
+grafico_evo
+
+# Media do Periodo para os Estados
+media_periodo_estados <- ifdm_lgpt %>%
+  group_by(sigla_uf) %>%
+  summarise(media_ifdm_periodo = mean(ifdm, na.rm = TRUE)) %>%
+  arrange(desc(media_ifdm_periodo))
+# Tabela
+media_periodo_estados %>%
+  mutate(media_ifdm_periodo = round(media_ifdm_periodo, 3)) %>%
+  kable("html", col.names = c("UF", "IFDM Médio (2013–2023)"),
+        align = "c",
+        caption = "Média do IFDM de Emprego e Renda por Estado (2013–2023)") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover")) %>%
+  column_spec(1, width = "10em", bold = TRUE) %>%
+  column_spec(2, width = "20em", bold = TRUE)
+
+
+##### Região #######
+
+df_regiao <- ifdm_lgpt %>%
+  mutate(
+    regiao = case_when(
+      sigla_uf %in% c("AC","AP","AM","PA","RO","RR","TO") ~ "Norte",
+      sigla_uf %in% c("AL","BA","CE","MA","PB","PE","PI","RN","SE") ~ "Nordeste",
+      sigla_uf %in% c("DF","GO","MT","MS") ~ "Centro-Oeste",
+      sigla_uf %in% c("ES","MG","RJ","SP") ~ "Sudeste",
+      sigla_uf %in% c("PR","RS","SC") ~ "Sul"
+    )
+  )
+# grafico 
+grafico_regi <- ggplot(df_regiao, aes(x = regiao, y = ifdm, fill = regiao)) +
+  geom_boxplot(
+    alpha = 0.9,
+    color = "black",        
+    size = 0.6,
+    outlier.color = viridis::viridis(1, option = "plasma"), 
+    outlier.size = 2.2
+  ) +
+  scale_fill_viridis_d(option = "plasma") +
+  labs(
+    title = "Distribuição do IFDM por Região (2013–2023)",
+    x = "Região",
+    y = "IFDM"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 18),
+    plot.subtitle = element_text(hjust = 0.5, size = 13, color = "gray25"),
+    axis.title = element_text(face = "bold"),
+    axis.text.x = element_text(face = "bold", size = 12),
+    axis.text.y = element_text(face = "bold", size = 12),
+    panel.grid.major.x = element_blank(),  
+    panel.grid.major.y = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    legend.position = "none",
+    plot.margin = margin(15, 15, 15, 15)
+  )
+grafico_regi
+
+##### Mapa Completo #####
+
+# Carregar mapa municipal
+mapa <- read_municipality(year = 2023) %>%
+  mutate(
+    code_muni_7 = as.character(code_muni),
+    code_muni = substr(code_muni_7, 1, 6)
+  )
+
+# Preparar
+df_map <- ifdm_lgpt %>%
+  filter(ano %in% c(2013, 2023)) %>%
+  select(ano, cod_munic, ifdm) %>%
+  mutate(code_muni = as.character(cod_munic)) %>%
+  select(-cod_munic)
+
+# Join
+mapa_ifdm <- mapa %>%
+  left_join(df_map, by = "code_muni")
+
+# Grafico 2013 
+mapa_2013 <- ggplot(mapa_ifdm %>% filter(ano == 2013)) +
+  geom_sf(aes(fill = ifdm), color = NA) +
+  scale_fill_viridis(
+    name = "IFDM 2013",
+    option = "plasma",
+    na.value = "grey90"
+  ) +
+  labs(
+    title = "Mapa do IFDM (Emprego e Renda) – 2013",
+    caption = "Fonte: Elaboração própria com dados do IBEGE / FIRJAN"
+  ) +
+  coord_sf(datum = NA, expand = FALSE) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    legend.title = element_text(face = "bold")
+  )
+mapa_2013    
+
+# Grafico 2023
+mapa_2023 <- ggplot(mapa_ifdm %>% filter(ano == 2023)) +
+  geom_sf(aes(fill = ifdm), color = NA) +
+  scale_fill_viridis(
+    name = "IFDM 2023",
+    option = "plasma",
+    na.value = "grey90"
+  ) +
+  labs(
+    title = "Mapa do IFDM (Emprego e Renda) – 2023",
+    caption = "Fonte: Elaboração própria com dados do IBEGE / FIRJAN"
+  ) +
+  coord_sf(datum = NA, expand = FALSE) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    legend.title = element_text(face = "bold")
+  )
+mapa_2023
+
+
+``` 
+
+
+
